@@ -24,7 +24,7 @@ class Neo4jHandler:
         #terminate the connection to db
         self.driver.close()
     
-    def runQuery(self, query, parameters = None):
+    def run_query(self, query, parameters = None):
         #standard method to execute cypher commands
         with self.driver.session() as session:
             result = session.run(query, parameters)
