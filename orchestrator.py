@@ -45,3 +45,41 @@ class ResumeOrchestrator:
 
         response = self.client.models.generate_content(model = self.model_id, contents = prompt)
         return response.text
+
+    def run_workflow(self, resume_text, jd_text):
+        #orders the agents to do their work step by step
+        print('[ORCHESTRATOR] Constructor Agent builing knowledge graph...')
+        cypher_code = constructorAgent(self.client, resume_text, self.model_id)
+
+        
+        person_id = self._extract_person_id(cypher_code)
+        
+        if not person_id:
+            print("Error: Could not extract Person ID from generated Cypher.")
+            return None
+
+        print(f"Writing candidate {person_id} to Neo4j...")
+        for statement in cypher_code.split(';'):
+            if statement.strip():
+                db.run_query(statement)
+
+        #ket auditor analyze the skills via knowledge graph
+        print('[ORCHESTRATOR] Auditor Agent analyzing hard skills...')
+        audit_report = auditorAgent(self.client, person_id, jd_text, self.model_id)
+
+        print('[ORCHESTRATOR] Skeptic Agent evaluating red flags...')
+        skeptic_report = skepticAgent(self.client, resume_text, jd_text, self.model_id)
+
+        print('[ORCHESTRATOR] Enthusiast Agent highlighting growth potential...')
+        enthusiast_report = enthusiastAgent(self.client, resume_text, jd_text, self.model_id)
+
+        print('[ORCHESTRATOR] Lead Recruiter Agent making final verdict...')
+        final_verdict = self.lead_recruiter_agent(skeptic_report, enthusiast_report)    
+
+        return {
+            "candidate_id": person_id,
+            "verdict": final_verdict,
+            "audit": audit_report
+        }
+    
+    
