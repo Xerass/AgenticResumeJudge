@@ -9,7 +9,8 @@ def read_pdf(file_path):
 def read_text(file_path):
     with open(file_path, 'r') as file:
         return file.read()
-    
+
+#main driver
 if __name__ == "__main__":
     #start orch
     orchestrator = ResumeOrchestrator()
