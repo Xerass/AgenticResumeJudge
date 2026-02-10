@@ -4,7 +4,7 @@ import logging
 # set up a logger because print statements are for amateurs
 logger = logging.getLogger("agent.enthusiast")
 
-async def enthusiast_agent(client, auditor_data: dict, jd_text: str, model_id: str) -> dict:
+async def enthusiastAgent(client, auditor_data: dict, jd_text: str, model_id: str) -> dict:
     # prompt engineering: we don't just ask for a summary. we enforce a specific 'thinking path'
     # we want the agent to act like a defense attorney cross-examining the auditor's report
     system_instruction = """
