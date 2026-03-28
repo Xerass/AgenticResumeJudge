@@ -56,14 +56,14 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
     """
 
     try:
-        # step 1: extract required hard skills from the jd using the llm
+
         # we keep this as a focused, single-purpose call
         jd_extraction_prompt = (
             "You are a technical recruiter. Extract a comma-separated list of "
             f"HARD technical skills only from this JD. No prose:\n\n{jd_text}"
         )
 
-        extraction_response = await client.models.generate_content_async(
+        extraction_response = await client.aio.models.generate_content(
             model=model_id,
             contents=jd_extraction_prompt
         )
@@ -71,7 +71,6 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
         jd_skills_raw = extraction_response.text
         jd_skills = [s.strip() for s in jd_skills_raw.split(",") if s.strip()]
 
-        # step 2: query the knowledge graph for factual skill evidence
         # this is the auditor's superpower — it doesn't guess, it queries
         query = """
         MATCH (p:Person {uid: $pid})-[:HAS_EXPERIENCE]->(w:WorkExperience)-[:USED_SKILL]->(s:Skill)
@@ -81,7 +80,6 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
 
         graph_results = db.run_query(query, {"pid": person_id})
 
-        # step 3: format the graph evidence as context for the llm
         # we give the llm structured facts, not raw cypher output
         graph_evidence = []
         for record in graph_results:
@@ -104,9 +102,8 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
         {jd_text}
         """
 
-        # step 4: ask the llm to produce the structured gap analysis
         # temperature is 0.1 because auditing must be deterministic
-        response = await client.models.generate_content_async(
+        response = await client.aio.models.generate_content(
             model=model_id,
             contents=[system_instruction, schema_enforcement, user_context],
             config={

@@ -39,7 +39,7 @@ async def constructorAgent(client, resume_text: str, candidate_id: str, model_id
 
     try:
         # ask gemini for the data structure
-        response = await client.models.generate_content_async(
+        response = await client.aio.models.generate_content(
             model=model_id,
             contents=[system_instruction, f"RESUME CONTENT:\n{resume_text}"],
             config={"response_mime_type": "application/json"}

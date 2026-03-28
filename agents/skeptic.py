@@ -55,7 +55,7 @@ async def skepticAgent(client, auditor_data: dict, jd_text: str, model_id: str) 
     try:
         # async call to keep the pipeline fast
         # lower temperature (0.2) because risk assessment should be cold and logical, not creative
-        response = await client.models.generate_content_async(
+        response = await client.aio.models.generate_content(
             model=model_id,
             contents=[system_instruction, schema_enforcement, user_context],
             config={

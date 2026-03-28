@@ -58,7 +58,7 @@ async def enthusiastAgent(client, auditor_data: dict, jd_text: str, model_id: st
     try:
         # the call is async so we don't block the event loop
         # we force the response mime type to json so the model doesn't yap
-        response = await client.models.generate_content_async(
+        response = await client.aio.models.generate_content(
             model=model_id,
             contents=[system_instruction, schema_enforcement, user_context],
             config={
