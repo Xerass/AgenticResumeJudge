@@ -1,0 +1,35 @@
+Senior Full-Stack Engineer — FinTech Startup (Series B)
+Location: Remote (US/EU timezone overlap required)
+Compensation: $145k–$180k + 0.15% equity
+
+About the Role
+We're building the next-generation payment infrastructure for cross-border B2B transactions. Our platform processes $2B+ annually and we need an engineer who can own features end-to-end — from database schema design to pixel-perfect frontends.
+
+Required Qualifications
+- 4+ years professional experience in full-stack web development
+- Strong proficiency in Python (FastAPI or Django) for backend services
+- Production experience with React or Next.js for frontend development
+- Hands-on experience with PostgreSQL, including query optimization and schema design
+- Familiarity with containerization (Docker) and orchestration (Kubernetes)
+- Experience building and consuming RESTful APIs and/or GraphQL
+- Working knowledge of cloud platforms (AWS preferred; GCP or Azure acceptable)
+- Understanding of CI/CD pipelines (GitHub Actions, Jenkins, or similar)
+- Solid grasp of Git workflows in a collaborative team environment
+
+Preferred Qualifications
+- Experience with event-driven architectures (Kafka, RabbitMQ, or similar)
+- Familiarity with infrastructure-as-code tools (Terraform, Pulumi)
+- Exposure to financial systems, payment processing, or regulatory compliance (PCI-DSS)
+- Experience with observability tools (Datadog, Grafana, Prometheus)
+- Background in microservices architecture and domain-driven design
+- Contributions to open-source projects
+
+Responsibilities
+- Design, build, and ship features across the full stack (Python backend + React frontend)
+- Own the reliability of your services — write tests, set up alerts, handle on-call rotation
+- Collaborate with product, design, and data engineering teams to scope and estimate work
+- Review pull requests and mentor junior engineers
+- Participate in architecture discussions and contribute to our technical roadmap
+
+Tech Stack
+Python 3.12, FastAPI, SQLAlchemy, PostgreSQL 16, Redis, React 18, Next.js 14, TypeScript, Docker, Kubernetes (EKS), AWS (Lambda, S3, SQS, RDS), GitHub Actions, Terraform, Datadog
