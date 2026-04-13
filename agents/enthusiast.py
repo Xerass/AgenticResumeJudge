@@ -1,12 +1,11 @@
 import json
 import logging
 
-# set up a logger because print statements are for amateurs
 logger = logging.getLogger("agent.enthusiast")
 
 async def enthusiastAgent(client, auditor_data: dict, jd_text: str, model_id: str) -> dict:
-    # prompt engineering: we don't just ask for a summary. we enforce a specific 'thinking path'
     # we want the agent to act like a defense attorney cross-examining the auditor's report
+    # should counteract with skeptic, bring a brighter POV into the mix
     system_instruction = """
     you are the 'growth potential' analyzer. your goal is to defend the candidate against the auditor's findings.
     
@@ -27,8 +26,6 @@ async def enthusiastAgent(client, auditor_data: dict, jd_text: str, model_id: st
     - do not be delusional. if a gap is real (e.g., missing 5 years of management), admit it.
     """
 
-    # we dump the dict to a string for the prompt, but we keep the structure
-    # this lets the model see the exact keys the auditor outputted
     user_context = f"""
     --- auditor report (the prosecution) ---
     {json.dumps(auditor_data)}
@@ -37,8 +34,7 @@ async def enthusiastAgent(client, auditor_data: dict, jd_text: str, model_id: st
     {jd_text}
     """
 
-    # pro tip: use a schema definition in the prompt or use the strictly typed generation config
-    # here we explicitly describe the json schema we want back to ensure stability
+    #schema again, but this time more on positive traits, wow so amazing
     schema_enforcement = """
     return this exact json structure:
     {
@@ -55,23 +51,21 @@ async def enthusiastAgent(client, auditor_data: dict, jd_text: str, model_id: st
     }
     """
 
+    #basically the same stuff as last time...
     try:
-        # the call is async so we don't block the event loop
-        # we force the response mime type to json so the model doesn't yap
+
         response = await client.aio.models.generate_content(
             model=model_id,
             contents=[system_instruction, schema_enforcement, user_context],
             config={
                 "response_mime_type": "application/json",
-                "temperature": 0.3 # keep it creative enough to find connections, but not hallucinate
+                "temperature": 0.3 # keep it creative enough to find connections but not hallucinate
             }
         )
 
-        # parse immediately. if this fails, the agent is broken
         return json.loads(response.text)
 
     except Exception as e:
-        # never let a single agent crash the whole orchestration
         logger.error(f"enthusiast agent failed: {e}")
         return {
             "error": "agent_failure", 

@@ -1,15 +1,17 @@
+"""
+Auditor's purpose is to discover via query related job skills based on Job Description
+"""
 import json
 import logging
 
 from database.driver import db
 
-# standard logging pattern 
 logger = logging.getLogger("agent.auditor")
 
 async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> dict:
     # the auditor is the fact checker of the pipeline
     # it cross-references the candidate's knowledge graph against the job description
-    # every claim it makes is backed by a graph query, not llm hallucination
+    # yet another strict query prompt, so we need some railgaurds
     system_instruction = """
     you are the 'technical skills auditor'. your job is to compare a candidate's verified skills
     against a job description and produce a structured gap analysis.
@@ -32,8 +34,7 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
     - preserve the original skill names from the job description.
     """
 
-    # strict json schema — same pattern as skeptic and enthusiast agents
-    # this allows downstream agents to programmatically access findings
+    # strict json schema again 
     schema_enforcement = """
     return this exact json structure:
     {
@@ -57,31 +58,37 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
 
     try:
 
-        # we keep this as a focused, single-purpose call
+        # as for the JD, we can just insert it as its standalone prompt
         jd_extraction_prompt = (
             "You are a technical recruiter. Extract a comma-separated list of "
             f"HARD technical skills only from this JD. No prose:\n\n{jd_text}"
         )
 
+        # get the jd response
         extraction_response = await client.aio.models.generate_content(
             model=model_id,
             contents=jd_extraction_prompt
         )
-
         jd_skills_raw = extraction_response.text
+        #csv style split to get skills
         jd_skills = [s.strip() for s in jd_skills_raw.split(",") if s.strip()]
 
-        # this is the auditor's superpower — it doesn't guess, it queries
+        #ask the db
+        #match person, if has experience, work experience, skill (get person data)
+        #if skill has some relation to another skill get that too
         query = """
         MATCH (p:Person {uid: $pid})-[:HAS_EXPERIENCE]->(w:WorkExperience)-[:USED_SKILL]->(s:Skill)
         OPTIONAL MATCH (s)-[:RELATED_TO]->(related:Skill)
         RETURN s.name AS FoundSkill, related.name AS RelatedSkill
         """
 
+        #run the query via the db  (just a search so its ok)
         graph_results = db.run_query(query, {"pid": person_id})
 
-        # we give the llm structured facts, not raw cypher output
+        # we give the llm structured facts
         graph_evidence = []
+
+        #each record in graph results get extracted and dumped into a jason
         for record in graph_results:
             found = record.get("FoundSkill")
             related = record.get("RelatedSkill")
@@ -102,7 +109,7 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
         {jd_text}
         """
 
-        # temperature is 0.1 because auditing must be deterministic
+        # temperature is 0.1 because auditing must be deterministic but we'll allow some creative interpretation regarding skills
         response = await client.aio.models.generate_content(
             model=model_id,
             contents=[system_instruction, schema_enforcement, user_context],
@@ -112,11 +119,10 @@ async def auditorAgent(client, person_id: str, jd_text: str, model_id: str) -> d
             }
         )
 
-        # parse immediately — if this fails, the agent is broken
         return json.loads(response.text)
 
     except Exception as e:
-        # never let a single agent crash the whole orchestration
+        # never let a single agent crash the whole orchestration, if they ever do crash, just send a log and return a defaulted list.
         logger.error(f"auditor agent failed: {e}")
         return {
             "skill_analysis": [],

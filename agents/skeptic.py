@@ -1,12 +1,12 @@
 import json
 import logging
 
-# standard logging pattern
 logger = logging.getLogger("agent.skeptic")
 
 async def skepticAgent(client, auditor_data: dict, jd_text: str, model_id: str) -> dict:
-    # the system prompt defines the "personality" and the "mission"
+    # this system prompt defines the "personality" and the "mission"
     # here, we want a "technical gatekeeper" who protects the team from bad hires
+    # essentially just a strict checker to see if candidate matches the JD
     system_instruction = """
     you are the 'technical risk' assessor. your job is to identify why this candidate might fail.
     
@@ -33,8 +33,12 @@ async def skepticAgent(client, auditor_data: dict, jd_text: str, model_id: str) 
     {jd_text}
     """
 
-    # strict json schema. this allows us to mathematically weigh the risk later
-    # e.g., if risk_score > 80, auto-reject
+    # strict json schema at it again
+    # should note some red flags, issues, impacts, reasonings
+    # then give some more concrete numerical estimates
+    # such as velocity risk (how much theyll affect output)
+    # risk_score just a basic rating
+    # final verdict
     schema_enforcement = """
     return this exact json structure:
     {
@@ -54,7 +58,7 @@ async def skepticAgent(client, auditor_data: dict, jd_text: str, model_id: str) 
 
     try:
         # async call to keep the pipeline fast
-        # lower temperature (0.2) because risk assessment should be cold and logical, not creative
+        # lower temperature, but allowed a little bit of freedom, ultimately, still logical
         response = await client.aio.models.generate_content(
             model=model_id,
             contents=[system_instruction, schema_enforcement, user_context],
@@ -68,7 +72,7 @@ async def skepticAgent(client, auditor_data: dict, jd_text: str, model_id: str) 
 
     except Exception as e:
         logger.error(f"skeptic agent failed: {e}")
-        # fail safe: if the skeptic crashes, assume high risk to be safe
+        #failsafe is to assume higher risk, and pending manual review
         return {
             "risk_score": 50,
             "verdict_recommendation": "manual_review",
