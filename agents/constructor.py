@@ -61,9 +61,11 @@ async def constructorAgent(client, resume_text: str, candidate_id: str, model_id
         # temp 0 simply means we are enforcing no outside thinking, strictly extract facts (important since we use this as the BASIS of knowledge)
         response = await client.aio.models.generate_content(
             model=model_id,
-            contents=[system_instruction, f"RESUME CONTENT:\n{resume_text}"],
-            config={"response_mime_type": "application/json",
-                    "temperature": 0.0}
+            contents=[system_instruction, schema_enforcement, user_context],
+            config={
+                "response_mime_type": "application/json",
+                "temperature": 0.0 
+            }
         )
         
         # since data is formatted as json already, we can just extract it via this
