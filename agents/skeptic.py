@@ -1,30 +1,41 @@
 import json
 import logging
 
-logger = logging.getLogger("agent.skeptic")
+#system messages sets the agent role/personality
+#human message is the actualinput query
 
-async def skepticAgent(client, auditor_data: dict, jd_text: str, model_id: str) -> dict:
-    # this system prompt defines the "personality" and the "mission"
-    # here, we want a "technical gatekeeper" who protects the team from bad hires
-    # essentially just a strict checker to see if candidate matches the JD
-    system_instruction = """
-    you are the 'technical risk' assessor. your job is to identify why this candidate might fail.
-    
-    input context:
-    1. auditor_findings: the raw skills gap analysis.
-    2. job_description: the strict requirements.
+from langchain_core.messages import SystemMessage, HumanMessage
 
-    your task:
-    analyze the gaps found by the auditor and calculate 'velocity risk' (how long until they are productive?).
-    
-    rules:
-    - if a 'required' skill is missing, that is a high risk.
-    - if a skill is a 'partial match' (e.g., they know vue but need react), flag it as 'ramp-up required'.
-    - look for 'dependency chains': if they are missing python, they probably can't do the django work either.
-    - be direct. do not sugarcoat.
-    """
+from core.llm import get_llm
+from core.schemas import SkepticOutput
 
-    # dump the input dict to string for the llm
+logger = logging.getLogger("skeptic")
+
+
+#defines model thought process and behavior
+SYSTEM_PROMPT = """
+you are the 'technical risk' assessor. your job is to identify why this candidate might fail.
+
+input context:
+1. auditor_findings: the raw skills gap analysis.
+2. job_description: the strict requirements.
+
+your task:
+analyze the gaps found by the auditor and calculate 'velocity risk' (how long until they are productive?).
+
+rules:
+- if a 'required' skill is missing, that is a high risk.
+- if a skill is a 'partial match' (e.g., they know vue but need react), flag it as 'ramp-up required'.
+- look for 'dependency chains': if they are missing python, they probably can't do the django work either.
+- be direct. do not sugarcoat.
+"""
+
+async def skepticAgent(auditor_data:dict, jd_text:str) -> SkepticOutput:
+
+    #langchain interface with setting up the model, with the schema we enforced
+    llm = get_llm(temperature=0.2).with_structured_output(SkepticOutput)
+
+    #supplies context necessary for judgement
     user_context = f"""
     --- auditor findings ---
     {json.dumps(auditor_data)}
@@ -33,48 +44,22 @@ async def skepticAgent(client, auditor_data: dict, jd_text: str, model_id: str) 
     {jd_text}
     """
 
-    # strict json schema at it again
-    # should note some red flags, issues, impacts, reasonings
-    # then give some more concrete numerical estimates
-    # such as velocity risk (how much theyll affect output)
-    # risk_score just a basic rating
-    # final verdict
-    schema_enforcement = """
-    return this exact json structure:
-    {
-        "red_flags": [
-            {
-                "issue": "string (e.g., missing primary language)",
-                "impact": "critical | major | minor",
-                "reasoning": "string (why this hurts the team)"
-            }
-        ],
-        "velocity_risk": "string (low_ramp_up | medium_ramp_up | high_ramp_up)",
-        "estimated_ramp_up_time": "string (e.g., '2-4 weeks')",
-        "risk_score": "int (0-100, where 100 is extremely risky)",
-        "verdict_recommendation": "reject | proceed_with_caution | interview"
-    }
-    """
-
     try:
-        # async call to keep the pipeline fast
-        # lower temperature, but allowed a little bit of freedom, ultimately, still logical
-        response = await client.aio.models.generate_content(
-            model=model_id,
-            contents=[system_instruction, schema_enforcement, user_context],
-            config={
-                "response_mime_type": "application/json",
-                "temperature": 0.2 
-            }
-        )
-
-        return json.loads(response.text)
+        return await llm.ainvoke([
+            SystemMessage(content=SYSTEM_PROMPT),
+            HumanMessage(content=user_context)  
+        ]) #ainvoke is the async cal for model, supply with bnoth system and human message
 
     except Exception as e:
         logger.error(f"skeptic agent failed: {e}")
-        #failsafe is to assume higher risk, and pending manual review
-        return {
-            "risk_score": 50,
-            "verdict_recommendation": "manual_review",
-            "error": "agent_crashed"
-        }
+
+        #defaults to a neutral judgement if it fails
+        return SkepticOutput(
+            red_flags=[],
+            velocity_risk="medium_ramp_up",
+            estimated_ramp_up_time="unknown",
+            risk_score=50,
+            verdict_recommendation="proceed_with_caution",
+        )
+    
+
