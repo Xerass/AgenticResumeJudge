@@ -1,4 +1,4 @@
-# agenticREsume
+# agenticResume
 
 An AI powered multi agent system for automated resume screening and deep candidate evaluation. It builds a persistent knowledge graph of a candidate's experience and employs a panel of specialized agents to provide a balanced hiring verdict.
 
