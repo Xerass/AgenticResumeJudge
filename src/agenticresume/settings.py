@@ -8,7 +8,7 @@ from functools import cache
 from pathlib import Path
 from typing import Literal 
 
-#for learning: field for one-use attr. secretStr for obfuscating strings without needing to hash them
+#for learning: field for variable metadata to validate on. secretStr for masking strings during display can still get via .get_secret_value()
 from pydantic import Field, SecretStr
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "prod"] = "dev"
 
-    #what's this for?
+    #defines what we ignore when it comes to python logging, anything above info is listened to
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     #LLM Settings
@@ -46,17 +46,12 @@ class Settings(BaseSettings):
     llm_model: str = "gemini-2.5-flash"
     llm_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     
-    #assign this when it is needed only
+    #required: no default, so missing key fails at boot
     google_api_key: SecretStr
 
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: SecretStr
-
-    #what's a property? and why do we need to know if is_dev?
-    @property
-    def is_dev(self) -> bool:
-        return self.env == "dev"
     
 @cache
 def get_settings() -> Settings:
