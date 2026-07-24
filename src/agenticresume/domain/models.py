@@ -73,7 +73,7 @@ class Role(Base):
     title: NonEmptyStr
     company: NonEmptyStr
     started: date
-    ended: date | None #none = currently still there
+    ended: date | None = None #none = currently still there
 
     @model_validator(mode = "after")
     def _dates_are_ordered(self) -> Self:
