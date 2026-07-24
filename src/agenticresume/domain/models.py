@@ -187,3 +187,47 @@ class JobPost(Base):
     title: NonEmptyStr
     raw_text: str = ""
     requirements: tuple[Requirement, ...] = ()
+
+
+# --- Value Objects (no real identity, never presists, used solely as ephemeral data storage)
+
+class Coverage(Base):
+    """How well one requirement is met, and by what."""
+
+    requirement_id: UUID
+    status: CoverageStatus
+    evidence: tuple[UUID, ...] = ()  # Fact ids
+    reasoning: str = ""
+
+    @model_validator(mode="after")
+    def _status_matches_evidence(self) -> Self:
+        #the invariant, stated literally, status 'none' iff no evidence
+        if (self.status == "none") != (len(self.evidence) == 0):
+            raise ValueError("status 'none' iff evidence is empty")
+        return self
+
+class Assessment(Base):
+    """A Judge's Read on the whole picture"""
+
+    persona: JudgePersona
+    summary: NonEmptyStr
+    points: tuple[str, ...] = ()
+
+class AnalysisResult(Base):
+    """The output of one screening run. Computed, not stored."""
+
+    id: UUID = Field(default_factory=uuid4)
+    profile_id: UUID
+    job_post_id: UUID
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    coverages: tuple[Coverage, ...] = ()
+    assessments: tuple[Assessment, ...] = ()
+
+    @property
+    def coverage_rate(self) -> float:
+        if not self.coverages:
+            return 0.0
+        weight = {"covered": 1.0, "partial": 0.5, "none": 0.0}
+        return sum(weight[c.status] for c in self.coverages) / len(self.coverages)
+
+
