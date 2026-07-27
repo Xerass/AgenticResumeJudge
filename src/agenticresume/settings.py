@@ -6,10 +6,10 @@ Nothing else in this package reads os.environ.
 
 from functools import cache
 from pathlib import Path
-from typing import Literal 
+from typing import Literal , Self
 
 #for learning: field for variable metadata to validate on. secretStr for masking strings during display can still get via .get_secret_value()
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -41,14 +41,30 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     #LLM Settings
-    #currently hardcoded in
-    llm_provider: Literal["google"] = "google"
+    llm_provider: Literal["google", "openai", "anthropic", "groq"] = "google"
     llm_model: str = "gemini-2.5-flash"
     llm_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
-    
-    #required: no default, so missing key fails at boot
-    google_api_key: SecretStr
 
+    #allow none, to enable providing only the used API key
+    google_api_key: SecretStr | None = None
+    openai_api_key: SecretStr | None = None
+    anthropic_api_key: SecretStr | None = None
+    groq_api_key: SecretStr | None = None
+
+    @model_validator(mode = "after")
+    def _active_provider_has_key(self) -> Self:
+        key = {
+            "google": self.google_api_key,
+            "openai": self.openai_api_key,
+            "anthropic": self.anthropic_api_key,
+            "groq": self.groq_api_key,
+        }[self.llm_provider]
+
+        if key is None:
+            raise ValueError(f"{self.llm_provider}_api_key is required when llm_provider={self.llm_provider!r}")
+
+        return self
+    
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: SecretStr
@@ -57,6 +73,6 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     "Build the settings once per process, called only on entry points"
 
-    return Settings()
+    return Settings()  # pyright: ignore[reportCallIssue]  # fields come from env, not args
 
 
