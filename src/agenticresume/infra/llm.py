@@ -73,8 +73,6 @@ def build_chat_model(settings: Settings) -> BaseChatModel:
         case _:  # pragma: no cover - Literal makes this exhaustive
             raise ValueError(f"unsupported provider: {settings.llm_provider}")
 
-def build_extractor(
-    settings: Settings, schema: type[BaseModel]
-) -> Runnable[LanguageModelInput, dict[str, Any] | BaseModel]:
+def build_extractor(settings: Settings, schema: type[BaseModel]) -> Runnable[LanguageModelInput, dict[str, Any] | BaseModel]:
     """A chat model constrained to emit `schema`."""
     return build_chat_model(settings).with_structured_output(schema)
