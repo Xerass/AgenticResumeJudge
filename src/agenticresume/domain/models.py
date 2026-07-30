@@ -72,12 +72,12 @@ class Role(Base):
     id: UUID = Field(default_factory= uuid4)
     title: NonEmptyStr
     company: NonEmptyStr
-    started: date
+    started: date | None = None
     ended: date | None = None #none = currently still there
 
     @model_validator(mode = "after")
     def _dates_are_ordered(self) -> Self:
-        if self.ended is not None and self.ended < self.started:
+        if self.started and self.ended is not None and self.ended < self.started:
             raise ValueError("ended must not precede started")
         return self
 
@@ -141,6 +141,15 @@ class CareerProfile(Base):
         #only return truths that are currently true for the you
         return tuple(f for f in self.facts if f.status == "active")
 
+    @property
+    def skills(self) -> tuple[Skill,...]:
+        """Person's real skills"""
+        seen: list[Skill] = []
+        for fact in self.active_facts:
+            for skill in fact.skills:
+                if skill not in seen:  # Skill.__eq__ dedups by canonical name
+                    seen.append(skill)
+        return tuple(seen)
 
     @model_validator(mode = "after")
     def _facts_reference_known_contexts(self) -> Self:

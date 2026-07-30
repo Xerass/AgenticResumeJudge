@@ -20,25 +20,23 @@ class ExtractedRole(Wire):
     #learning purpose: dont do default = [], this item is mutable we need a factory so schemas dont share the same list
     bullets: list[str] = Field(
         default_factory= list,
-        max_length= 25,
         description="Each concrete accomplishment or responsibility, verbatim, one per bullet"
     )
 
     skills: list[str] = Field(
         default_factory=list,
-        max_length=40,
         description="Specific tools, languages, frameworks named in this role",
     )
 
 
 class ExtractedProject(Wire):
     name: str = Field(description="Project title")
-    summary: str = Field(default = "", )
-    bullets: list[str] = Field(default_factory=list, max_length=15)
-    skills: list[str] = Field(default_factory=list, max_length=30)
+    summary: str = Field(default="", description="One-line description if present")
+    bullets: list[str] = Field(default_factory=list)
+    skills: list[str] = Field(default_factory=list)
 
 
 class ExtractionOutput(Wire):
     full_name: str = Field(description="Candidate's full name; empty string if not found")
-    roles: list[ExtractedRole] = Field(default_factory=list, max_length=20)
-    projects: list[ExtractedProject] = Field(default_factory=list, max_length=20)
+    roles: list[ExtractedRole] = Field(default_factory=list)
+    projects: list[ExtractedProject] = Field(default_factory=list)
