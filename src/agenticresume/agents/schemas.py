@@ -3,7 +3,7 @@
 """
 
 from pydantic import BaseModel, ConfigDict, Field
-
+from agenticresume.domain.models import Necessity, RequirementKind
 class Wire(BaseModel):
     """Base model for wire schemas"""
     model_config = ConfigDict(extra = "forbid")
@@ -40,3 +40,32 @@ class ExtractionOutput(Wire):
     full_name: str = Field(description="Candidate's full name; empty string if not found")
     roles: list[ExtractedRole] = Field(default_factory=list)
     projects: list[ExtractedProject] = Field(default_factory=list)
+
+
+class ExtractedRequirement(Wire):
+    text: str = Field(description="The requirement stated verbatim, e.g. '5+ years of Python'")
+    kind: RequirementKind = Field(
+        description=(
+            "Category: 'skill' (a named tool/tech/language), 'domain' (industry or "
+            "field experience), 'credential' (degree/cert/license), 'soft' (a soft "
+            "skill), or 'logistical' (location, work authorization, availability)"
+        )
+    )
+    necessity: Necessity = Field(
+        description="'must_have' if required/mandatory, 'nice_to_have' if preferred or a bonus"
+    )
+    skill: str = Field(
+        default="",
+        description="If kind is 'skill', the normalized skill name (e.g. 'React'); empty otherwise",
+    )
+    years_required: int | None = Field(
+        default=None, description="Minimum years of experience if explicitly stated, else null"
+    )
+
+class JobPostOutput(Wire):
+    company: str = Field(description="Hiring company name; empty string if not found")    
+    title:str = Field(description = "Job title; empty string if not found")
+    requirements: list[ExtractedRequirement] = Field(default_factory=list)
+
+
+

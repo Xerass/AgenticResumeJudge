@@ -75,4 +75,7 @@ def build_chat_model(settings: Settings) -> BaseChatModel:
 
 def build_extractor(settings: Settings, schema: type[BaseModel]) -> Runnable[LanguageModelInput, dict[str, Any] | BaseModel]:
     """A chat model constrained to emit `schema`."""
+
+    #with_structured_output guarantees that the model explicitly reads the schema given and uses that for output
+    #handy since it also parses it back into the wire schema
     return build_chat_model(settings).with_structured_output(schema)
