@@ -2,9 +2,16 @@
 
 
 from datetime import date, datetime
-from agenticresume.agents.schemas import ExtractionOutput
-from agenticresume.domain.models import CareerProfile, Fact, Project, Role, Skill
-
+from agenticresume.agents.schemas import ExtractionOutput, JobPostOutput
+from agenticresume.domain.models import (
+    CareerProfile, 
+    Fact, 
+    Project, 
+    Role, 
+    Skill,
+    JobPost,
+    Requirement,
+    )
 
 def _parse_month(value: str) -> date | None:
     """Tolerant date parse. 'YYYY-MM' or 'YYYY' -> date; anything else -> None."""
@@ -93,4 +100,43 @@ def to_career_profile(extraction: ExtractionOutput, *, source_document: str = ""
 
 
         
+def to_job_post(extraction: JobPostOutput, *, raw_text: str = "") -> JobPost:
+    """Transofrms wire schema of jobPostOutput into domain JobPost"""
 
+    requirements: list[Requirement] = []
+
+
+    for r in extraction.requirements:
+        #text is the verbatim requiremeent of the requirment object
+        text = r.text.strip()
+        if not text:
+            continue
+
+        kind = r.kind
+        skill: Skill | None = None
+
+        if kind == "skill":
+            name = r.skill.strip()
+            if name:
+                skill = Skill.of(name)
+            else:
+                #model tagged it as skill but named none, reclassify it as a domain skill
+                kind = "domain"
+
+
+        requirements.append(
+            Requirement(
+                text=text,
+                kind=kind,
+                necessity=r.necessity,
+                skill=skill,
+                year_required = r.years_required
+            )
+        )
+
+    return JobPost(
+        company = extraction.company.strip() or "Unknown Company",
+        title = extraction.title.strip() or "Unknown Title",
+        raw_text = raw_text.strip(),
+        requirements = tuple(requirements)
+    )
