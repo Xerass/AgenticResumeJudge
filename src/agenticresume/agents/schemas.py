@@ -3,7 +3,7 @@
 """
 
 from pydantic import BaseModel, ConfigDict, Field
-from agenticresume.domain.models import Necessity, RequirementKind
+from agenticresume.domain.models import CoverageStatus, Necessity, RequirementKind
 class Wire(BaseModel):
     """Base model for wire schemas"""
     model_config = ConfigDict(extra = "forbid")
@@ -68,4 +68,15 @@ class JobPostOutput(Wire):
     requirements: list[ExtractedRequirement] = Field(default_factory=list)
 
 
+class CoverageItem(Wire):
+    requirement_index: int = Field(description = "The [R#] number of the requirement being assessed")
+    status: CoverageStatus = Field(description = "covered' if fully met, 'partial' if partly met, 'none' if not met")
+    evidence_indices: list[int] = Field(
+        default_factory = list,
+        description = "[F#] numbers of the facts that support this; empty if none"
+    )
 
+    reasoning: str = Field(default = "", description = "A brief explanation justifying the judgement")
+
+class AuditorOutput(Wire):
+    coverage: list[CoverageItem] = Field(default_factory=list)
