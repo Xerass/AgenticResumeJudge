@@ -2,7 +2,7 @@
 
 
 from datetime import date, datetime
-from agenticresume.agents.schemas import ExtractionOutput, JobPostOutput
+from agenticresume.agents.schemas import ExtractionOutput, JobPostOutput, AuditorOutput
 from agenticresume.domain.models import (
     CareerProfile, 
     Fact, 
@@ -11,6 +11,7 @@ from agenticresume.domain.models import (
     Skill,
     JobPost,
     Requirement,
+    Coverage
     )
 
 def _parse_month(value: str) -> date | None:
@@ -140,3 +141,57 @@ def to_job_post(extraction: JobPostOutput, *, raw_text: str = "") -> JobPost:
         raw_text = raw_text.strip(),
         requirements = tuple(requirements)
     )
+
+def coverages_from_audit(
+    output: AuditorOutput,
+    facts: tuple[Fact, ...],
+    requirements: tuple[Requirement, ...],        
+) -> list[Coverage]:
+
+
+    """Translates index-based audit into real IDs"""
+
+    coverages: list[Coverage] = []
+    seen: set = set()
+
+    for item in output.coverage:
+        ri = item.requirement_index - 1
+        if not 0 <= ri < len(requirements):
+            continue #hallucincated index, drop it
+
+        req = requirements[ri]
+        if req.id in seen:
+            continue #duplicated coverage
+
+        seen.add(req.id)
+
+        evidence = tuple(
+            facts[fi - 1].id
+            for fi in item.evidence_indices
+            if 0 <= fi - 1 < len(facts)  # drop hallucinated fact indices
+        )
+
+        status = item.status
+        if not evidence and status != "none":
+            status = "none" #no evidence (forced on no evidence and status = none)
+        elif evidence and status == "none":
+            status = "partial" 
+
+        coverages.append(
+            Coverage(
+                requirement_id=req.id,
+                status=status,
+                evidence=evidence,
+                reasoning=item.reasoning,
+            )
+        )
+
+
+    #any reqs the auditor skipped is uncovered
+    for req in requirements:
+        if req.id not in seen:
+            coverages.append(
+                Coverage(requirement_id=req.id, status="none", reasoning="not assessed")
+            )
+
+    return coverages
