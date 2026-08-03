@@ -19,6 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 NonEmptyStr = Annotated[str, Field(min_length= 1)]
 
 #define literals for string vars
+
+#requirement kind specifically deals with either skills, domain knowledge, credentials for roles / achievements, soft skills, and logistical facts like location of service.
 RequirementKind = Literal["skill", "domain", "credential", "soft", "logistical"]
 Necessity = Literal["must_have", "nice_to_have"]
 CoverageStatus = Literal["covered", "partial", "none"]
