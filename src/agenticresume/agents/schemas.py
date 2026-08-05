@@ -80,3 +80,9 @@ class CoverageItem(Wire):
 
 class AuditorOutput(Wire):
     coverage: list[CoverageItem] = Field(default_factory=list)
+
+class AssessmentOutput(Wire):
+    """Output of the judgement agents, simple summary and points"""
+
+    summary: str = Field(description = "One or two sentences capturing the overall read")
+    points: list[str] = Field(default_factory = list, description="Specific supporting points, one per item")

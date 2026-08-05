@@ -2,10 +2,14 @@
 
 
 from datetime import date, datetime
-from agenticresume.agents.schemas import ExtractionOutput, JobPostOutput, AuditorOutput
+from uuid import UUID
+
+from agenticresume.agents.schemas import AssessmentOutput, ExtractionOutput, JobPostOutput, AuditorOutput
 from agenticresume.domain.models import (
+    Assessment,
     CareerProfile, 
-    Fact, 
+    Fact,
+    JudgePersona, 
     Project, 
     Role, 
     Skill,
@@ -152,7 +156,7 @@ def coverages_from_audit(
     """Translates index-based audit into real IDs"""
 
     coverages: list[Coverage] = []
-    seen: set = set()
+    seen: set[UUID] = set()
 
     for item in output.coverage:
         ri = item.requirement_index - 1
@@ -195,3 +199,10 @@ def coverages_from_audit(
             )
 
     return coverages
+
+def to_assessment(output: AssessmentOutput, *, persona: JudgePersona) -> Assessment:
+    """Stamps a persona onto a judge's raw output and cleans it"""
+
+    points = tuple(p.strip() for p in output.points if p.strip())
+    summary = output.summary.strip() or "No assessment produced."  # summary is NonEmptyStr
+    return Assessment(persona=persona, summary=summary, points=points)

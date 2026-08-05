@@ -7,7 +7,7 @@ import logging
 from langchain_core.messages import HumanMessage, SystemMessage
 from agenticresume.agents.mapping import coverages_from_audit
 from agenticresume.agents.schemas import AuditorOutput
-from agenticresume.domain.models import CareerProfile, Coverage, JobPost
+from agenticresume.domain.models import CareerProfile, Coverage, Fact, JobPost, Requirement
 from agenticresume.infra.llm import build_extractor
 from agenticresume.settings import Settings
 
@@ -29,7 +29,7 @@ supports it, cite nothing and use "none".
 """
 
 
-def _render_context(profile: CareerProfile, facts: tuple, requirements: tuple)->str:
+def _render_context(profile: CareerProfile, facts: tuple[Fact, ...], requirements: tuple[Requirement, ...])->str:
     """builds a context string for the auditor prompt"""
 
     where = {r.id: f"{r.title} @ {r.company}" for r in profile.roles}
