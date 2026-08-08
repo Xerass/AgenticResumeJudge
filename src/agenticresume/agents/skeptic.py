@@ -6,15 +6,8 @@ Focuses on what you lack
 """
 
 import logging
-from collections import Counter
-from langchain_core.messages import SystemMessage, HumanMessage
-from agenticresume.agents.mapping import to_assessment
-from agenticresume.agents.schemas import AssessmentOutput
-from agenticresume.domain.models import Assessment, Coverage, JobPost
-from agenticresume.infra.llm import build_extractor
-from agenticresume.settings import Settings
 
-
+from agenticresume.agents.judge import run_judge
 
 logger = logging.getLogger(__name__)
 
@@ -33,46 +26,11 @@ grounded risk points.
 """
 
 
-def _render_coverages(job_post: JobPost, coverages: list[Coverage]) -> str:
-    """Renders the list of coverages with job post into a neat string for LLM"""
-
-    reqs = {r.id: r for r in job_post.requirements}
-    tally = Counter(c.status for c in coverages)
-
-    lines = [
-        f"ROLE: {job_post.title} @ {job_post.company}",
-        f"TALLY: {tally['covered']} covered, {tally['partial']} partial, {tally['none']} none",
-        "",
-        "ASSESSMENT PER REQUIREMENT:"
-    ]
-
-
-    for c in coverages:
-        req = reqs.get(c.requirement_id)
-        if req is not None:
-            lines.append(f"- [{c.status}] ({req.necessity}) {req.text} :: {c.reasoning}")
-
-
-    return "\n".join(lines)
-
-
-async def assess_skeptic(settings: Settings, job_post: JobPost, coverages: list[Coverage]) -> Assessment:
-    """Runs the skeptic agent to produce an assessment of the coverages"""
-
-    """Produce the Skeptic's assesment"""
-
-    context = _render_coverages(job_post, coverages)
-    model = build_extractor(settings, AssessmentOutput)
-
-    result = await model.ainvoke(
-        [
-            SystemMessage(content=SYSTEM_PROMPT), 
-            HumanMessage(content=context)
-        ]
+async def run_skeptic(settings, job_post, coverages):
+    return await run_judge(
+        settings,
+        job_post,
+        coverages,
+        persona="skeptic",
+        system_prompt=SYSTEM_PROMPT,
     )
-
-    if not isinstance(result, AssessmentOutput):
-        raise TypeError(f"skeptic returned {type(result).__name__}, expected AssessmentOutput")
-
-    logger.info("skeptic produced %d points", len(result.points))
-    return to_assessment(result, persona="skeptic")
