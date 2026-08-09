@@ -25,7 +25,7 @@ RequirementKind = Literal["skill", "domain", "credential", "soft", "logistical"]
 Necessity = Literal["must_have", "nice_to_have"]
 CoverageStatus = Literal["covered", "partial", "none"]
 ContextKind = Literal["role", "project"]
-JudgePersona = Literal["skeptic", "enthusiast"]
+JudgePersona = Literal["skeptic", "enthusiast", "pragmatist"]
 FactStatus = Literal["active", "superseded"]
 
 #vase class, defines configDict only
