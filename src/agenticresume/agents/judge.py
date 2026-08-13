@@ -4,7 +4,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from agenticresume.agents.mapping import to_assessment
 from agenticresume.agents.schemas import AssessmentOutput
 from agenticresume.domain.models import Coverage, JobPost, Assessment, JudgePersona
-from agenticresume.infra.llm import build_extractor
+from agenticresume.infra.llm import build_extractor, invoke_structured
 from agenticresume.settings import Settings
 
 
@@ -35,17 +35,7 @@ def _render_coverages(job_post: JobPost, coverages: list[Coverage]) -> str:
 
 async def run_judge(settings: Settings, job_post: JobPost, coverages: list[Coverage], *, persona:JudgePersona, system_prompt: str) -> Assessment:
     """Runs the Judge LLM, given a judge Persona and system prompt"""
-
     context = _render_coverages(job_post, coverages)
-    model = build_extractor(settings, AssessmentOutput)
+    output = await invoke_structured(settings, AssessmentOutput, system_prompt, context)
 
-    result = await model.ainvoke(
-        [
-            SystemMessage(content=system_prompt), 
-            HumanMessage(content=context)
-         ]
-    )
-
-    if not isinstance(result, AssessmentOutput):
-        raise TypeError(f"{persona} returned {type(result).__name__}")
-    return to_assessment(result, persona=persona)
+    return to_assessment(output, persona=persona)

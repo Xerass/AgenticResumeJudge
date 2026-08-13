@@ -5,14 +5,19 @@ Understands provider, able to access settins
 Use to create any agent to abstract away the provider in use
 """
 
-from typing import Any
+from typing import Any, TypeVar
 
 from langchain_core.language_models import BaseChatModel, LanguageModelInput
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel, SecretStr
 
 from agenticresume.settings import Settings
 
+
+#cool typevar usage, since were removing the llm invoke from agents, we need to make it schema agnostic
+#serves as a "whatever fills me in" typevar, so we can use it to type the output of the llm invoke
+SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 def _require(key: SecretStr | None, provider: str) -> SecretStr:
     """Return the active provider's key, guaranteed present by settings.
@@ -79,3 +84,14 @@ def build_extractor(settings: Settings, schema: type[BaseModel]) -> Runnable[Lan
     #with_structured_output guarantees that the model explicitly reads the schema given and uses that for output
     #handy since it also parses it back into the wire schema
     return build_chat_model(settings).with_structured_output(schema)
+
+#typevar allows us to use this function with any schema, and it will return the correct type
+async def invoke_structured(settings: Settings,schema: type[SchemaT],system_prompt: str,user_content: str,) -> SchemaT:
+    """Call the model with a system prompt and user content, return a `schema` instance."""
+    model = build_extractor(settings, schema)
+    result = await model.ainvoke(
+        [SystemMessage(content=system_prompt), HumanMessage(content=user_content)]
+    )
+    if not isinstance(result, schema):
+        raise TypeError(f"model returned {type(result).__name__}, expected {schema.__name__}")
+    return result
