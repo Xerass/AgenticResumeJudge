@@ -4,8 +4,9 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from agenticresume.agents.schemas import AssessmentOutput, ExtractionOutput, JobPostOutput, AuditorOutput
+from agenticresume.agents.schemas import AssessmentOutput, ExtractionOutput, JobPostOutput, AuditorOutput, RecruiterOutput
 from agenticresume.domain.models import (
+    AnalysisResult,
     Assessment,
     CareerProfile, 
     Fact,
@@ -206,3 +207,24 @@ def to_assessment(output: AssessmentOutput, *, persona: JudgePersona) -> Assessm
     points = tuple(p.strip() for p in output.points if p.strip())
     summary = output.summary.strip() or "No assessment produced."  # summary is NonEmptyStr
     return Assessment(persona=persona, summary=summary, points=points)
+
+
+def to_analysis_result(
+    output: RecruiterOutput,
+    *,
+    profile_id: UUID,
+    job_post_id: UUID,
+    coverages: list[Coverage],
+    assessments: list[Assessment],
+    score: float,
+) -> AnalysisResult:
+    """Transforms the recruiter output into a domain AnalysisResult"""
+    return AnalysisResult(
+        profile_id=profile_id,
+        job_post_id=job_post_id,
+        coverages=tuple(coverages),
+        assessments=tuple(assessments),
+        decision=output.decision,
+        score=score,  # deterministic, injected, not from the LLM
+        rationale=output.rationale.strip() or "No rationale provided.",
+    )

@@ -27,6 +27,7 @@ CoverageStatus = Literal["covered", "partial", "none"]
 ContextKind = Literal["role", "project"]
 JudgePersona = Literal["skeptic", "enthusiast", "pragmatist"]
 FactStatus = Literal["active", "superseded"]
+Decision = Literal["invite", "reject", "hold"]
 
 #vase class, defines configDict only
 class Base(BaseModel):
@@ -233,7 +234,10 @@ class AnalysisResult(Base):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     coverages: tuple[Coverage, ...] = ()
     assessments: tuple[Assessment, ...] = ()
-
+    decision: Decision
+    score: float =  Field(ge = 0.0, le = 1.0) #weighted score
+    rationale: str = "" #decision rationale
+    
     @property
     def coverage_rate(self) -> float:
         if not self.coverages:

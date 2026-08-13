@@ -86,3 +86,11 @@ class AssessmentOutput(Wire):
 
     summary: str = Field(description = "One or two sentences capturing the overall read")
     points: list[str] = Field(default_factory = list, description="Specific supporting points, one per item")
+
+class RecruiterOutput(Wire):
+    """Output of the recruiter agent, final decision rationale"""
+
+    decision: str = Field(description = "Final decision: 'invite', 'reject', or 'hold'")
+    rationale: str = Field(
+        description="2-3 sentences synthesizing the panel and justifying the decision"
+    )
