@@ -8,6 +8,8 @@ Focuses on what you lack
 import logging
 
 from agenticresume.agents.judge import run_judge
+from agenticresume.domain.models import Assessment, Coverage, JobPost
+from agenticresume.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,9 @@ decision-relevant points.
 """
 
 
-async def run_pragmatist(settings, job_post, coverages):
+async def run_pragmatist(
+    settings: Settings, job_post: JobPost, coverages: list[Coverage]
+) -> Assessment:
     return await run_judge(
         settings,
         job_post,

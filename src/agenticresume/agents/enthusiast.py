@@ -7,6 +7,8 @@ Focuses on growth potential and upside. Looks for ways to make a hire work, rath
 import logging
 
 from agenticresume.agents.judge import run_judge
+from agenticresume.domain.models import Assessment, Coverage, JobPost
+from agenticresume.settings import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,9 @@ Give a short summary of your overall enthusiasm, then a list of specific, \
 grounded points in the candidate's favor.
 """
 
-async def run_enthusiast(settings, job_post, coverages):
+async def run_enthusiast(
+    settings: Settings, job_post: JobPost, coverages: list[Coverage]
+) -> Assessment:
     return await run_judge(
         settings,
         job_post,

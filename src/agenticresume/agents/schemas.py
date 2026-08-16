@@ -3,7 +3,7 @@
 """
 
 from pydantic import BaseModel, ConfigDict, Field
-from agenticresume.domain.models import CoverageStatus, Necessity, RequirementKind
+from agenticresume.domain.models import CoverageStatus, Decision, Necessity, RequirementKind
 class Wire(BaseModel):
     """Base model for wire schemas"""
     model_config = ConfigDict(extra = "forbid")
@@ -90,7 +90,7 @@ class AssessmentOutput(Wire):
 class RecruiterOutput(Wire):
     """Output of the recruiter agent, final decision rationale"""
 
-    decision: str = Field(description = "Final decision: 'invite', 'reject', or 'hold'")
+    decision: Decision = Field(description="Final decision: 'invite', 'reject', or 'hold'")
     rationale: str = Field(
         description="2-3 sentences synthesizing the panel and justifying the decision"
     )

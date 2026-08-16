@@ -19,7 +19,7 @@ def weighted_coverage(coverage: tuple[Coverage, ...], requirements: tuple[Requir
     for c in coverage:
         weight = _NECESSITY_WEIGHT[necessity_map[c.requirement_id]]
         total += weight
-        earned = _STATUS_WEIGHT[c.status] * weight
+        earned += _STATUS_WEIGHT[c.status] * weight
 
     return earned / total if total > 0 else 0.0
 
