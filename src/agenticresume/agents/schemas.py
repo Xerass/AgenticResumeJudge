@@ -90,7 +90,7 @@ class AssessmentOutput(Wire):
 class RecruiterOutput(Wire):
     """Output of the recruiter agent, final decision rationale"""
 
-    decision: Decision = Field(description="Final decision: 'invite', 'reject', or 'hold'")
+    decision: Decision = Field(description = "Final decision: 'invite', 'reject', or 'hold'")
     rationale: str = Field(
         description="2-3 sentences synthesizing the panel and justifying the decision"
     )
