@@ -20,38 +20,38 @@ from agenticresume.settings import Settings
 logger = logging.getLogger(__name__)
 
 
-async def extract_node(state: ScreeningState, *, settings: Settings) -> dict:
+async def extract_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
     extraction = await extract_profile(settings, state["resume_text"])
     profile = to_career_profile(extraction, source_document="resume")
     return {"profile": profile}
 
 
-async def parse_node(state: ScreeningState, *, settings: Settings) -> dict:
+async def parse_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
     parsed = await parse_job_post(settings, state["jd_text"])
     return {"job_post": to_job_post(parsed, raw_text=state["jd_text"])}
 
 
-async def audit_node(state: ScreeningState, *, settings: Settings) -> dict:
+async def audit_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
     coverages = await audit(settings, state["profile"], state["job_post"])
     return {"coverages": coverages}
 
 
-async def skeptic_node(state: ScreeningState, *, settings: Settings) -> dict:
+async def skeptic_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
     a = await run_skeptic(settings, state["job_post"], state["coverages"])
     return {"assessments": [a]}          # list-of-one → reducer concatenates the 3
 
 
-async def enthusiast_node(state: ScreeningState, *, settings: Settings) -> dict:
+async def enthusiast_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
     a = await run_enthusiast(settings, state["job_post"], state["coverages"])
     return {"assessments": [a]}
 
 
-async def pragmatist_node(state: ScreeningState, *, settings: Settings) -> dict:
+async def pragmatist_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
     a = await run_pragmatist(settings, state["job_post"], state["coverages"])
     return {"assessments": [a]}
 
 
-async def recruiter_node(state: ScreeningState, *, settings: Settings) -> dict:
+async def recruiter_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
     result = await recommend(
         settings,
         state["profile"],

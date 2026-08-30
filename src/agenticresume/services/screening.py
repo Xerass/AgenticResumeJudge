@@ -9,7 +9,7 @@ from agenticresume.settings import Settings
 async def screen_resume(settings: Settings, resume_text: str, jd_text: str) -> AnalysisResult:
     """Screen a resume against a job description"""
     app = build_graph(settings = settings)
-    final = await app.aiinvoke(
+    final = await app.ainvoke(
         {
             "resume_text": resume_text,
             "jd_text": jd_text

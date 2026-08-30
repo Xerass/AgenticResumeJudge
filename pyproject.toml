@@ -51,3 +51,6 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.pyright]
+reportTypedDictNotRequiredAccess = "none"  # LangGraph state channels are present by graph construction, not by type
