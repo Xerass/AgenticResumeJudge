@@ -4,14 +4,15 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from agenticresume.agents.schemas import AssessmentOutput, ExtractionOutput, JobPostOutput, AuditorOutput, RecruiterOutput
+from agenticresume.agents.schemas import AssessmentOutput, ExtractionOutput, JobPostOutput, AuditorOutput, RecruiterOutput, TailorOutput
 from agenticresume.domain.models import (
     AnalysisResult,
     Assessment,
     CareerProfile, 
     Fact,
     JudgePersona, 
-    Project, 
+    Project,
+    Reframe, 
     Role, 
     Skill,
     JobPost,
@@ -228,3 +229,41 @@ def to_analysis_result(
         score=score,  # deterministic, injected, not from the LLM
         rationale=output.rationale.strip() or "No rationale provided.",
     )
+
+def raframes_from_tailor(output: TailorOutput, facts: tuple[Fact, ...], requirements: tuple[Requirement, ...]) -> list[Reframe]:
+    """Translates the index based tailoring plan into domain reframes"""
+
+    reframes: list[Reframe] = []
+
+    for item in output.items:
+        ri = item.requirement_index - 1
+        if not 0 <= ri < len(requirements):
+            continue #hallucinated index, drop it
+
+        req = requirements[ri]
+
+        source_id: UUID | None = None
+        if item.source_fact_index is not None:
+            fi = item.source_fact_index - 1
+            if 0 <= fi < len(facts):  # drop hallucinated fact indices
+                source_id = facts[fi].id
+
+        move = item.move
+
+        #reframe with no real fact is still a gap
+        if move != "gap" and source_id is None:
+            move = "gap"
+
+        text = "" if move == "gap" else item.proposed_text.strip()
+
+        reframes.append(
+            Reframe(
+                requirement_id=req.id,
+                move=move,
+                source_fact_id=source_id,
+                proposed_text=text,
+                rationale=item.rationale.strip(),
+            )
+        )
+
+    return reframes

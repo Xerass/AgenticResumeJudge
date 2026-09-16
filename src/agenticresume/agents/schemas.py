@@ -3,7 +3,10 @@
 """
 
 from pydantic import BaseModel, ConfigDict, Field
-from agenticresume.domain.models import CoverageStatus, Decision, Necessity, RequirementKind
+from agenticresume.domain.models import (
+    CoverageStatus, Decision, Necessity, RequirementKind, TailorMove,
+)
+
 class Wire(BaseModel):
     """Base model for wire schemas"""
     model_config = ConfigDict(extra = "forbid")
@@ -27,6 +30,25 @@ class ExtractedRole(Wire):
         default_factory=list,
         description="Specific tools, languages, frameworks named in this role",
     )
+
+class ReframeItem(Wire):
+    requirement_index: int = Field(description="The [R#] number of the weak requirement")
+    move: TailorMove = Field(
+        description=(
+            "'reframe' to reword a cited fact toward the JD's language; "
+            "'surface' to point at an existing fact the audit missed; "
+            "'gap' if nothing truthful supports it"
+        )
+    )
+    source_fact_index: int | None = Field(
+        default=None,
+        description="[F#] of the fact this draws on; null ONLY when move is 'gap'",
+    )
+    proposed_text: str = Field(
+        default="",
+        description="The reworded variant, reusing only facts present in the cited [F#]; empty for a gap",
+    )
+    rationale: str = Field(default="", description="One sentence: why this move, or why it's a real gap")
 
 
 class ExtractedProject(Wire):
@@ -94,3 +116,6 @@ class RecruiterOutput(Wire):
     rationale: str = Field(
         description="2-3 sentences synthesizing the panel and justifying the decision"
     )
+
+class TailorOutput(Wire):
+    items: list[ReframeItem] = Field(default_factory=list)

@@ -28,6 +28,8 @@ ContextKind = Literal["role", "project"]
 JudgePersona = Literal["skeptic", "enthusiast", "pragmatist"]
 FactStatus = Literal["active", "superseded"]
 Decision = Literal["invite", "reject", "hold"]
+TailorMove = Literal["reframe", "surface", "gap"]
+
 
 #vase class, defines configDict only
 class Base(BaseModel):
@@ -225,6 +227,24 @@ class Assessment(Base):
     summary: NonEmptyStr
     points: tuple[str, ...] = ()
 
+class Reframe(Base):
+    """
+    A move backed by facts that strengthens a resume aginst a weak requirement
+    """
+
+    requirement_id: UUID
+    move: TailorMove
+    source_fact_id: UUID | None = None      # the truth this descends from
+    proposed_text: str = ""  # the variant wording; empty for a gap
+    rationale: str = ""
+
+    @model_validator(mode = "after")
+    def _grounded_unless_gap(self) -> Self: #checks if a reframe is fabricated, source fact id must exist
+        if (self.move == "gap") != (self.source_fact_id is None):
+            raise ValueError("reframe/surface must cite a source fact; only 'gap' may not")
+        return self
+
+    
 class AnalysisResult(Base):
     """The output of one screening run. Computed, not stored."""
 
