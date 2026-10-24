@@ -13,9 +13,16 @@ from agenticresume.graph.nodes import (
     pragmatist_node,
     recruiter_node,
     skeptic_node,
+    tailor_node,
 )
 from agenticresume.graph.state import ScreeningState
 from agenticresume.settings import Settings
+
+
+def route_after_recruiter(state: ScreeningState) -> str:
+    """Pure, deterministic branch — no LLM. The verdict is the decision point:
+    an invite is done; a hold/reject routes into the advocate to tailor."""
+    return "tailor" if state["result"].decision != "invite" else "done"
 
 
 def build_graph(settings: Settings) -> Runnable[ScreeningState, ScreeningState]:
@@ -31,6 +38,7 @@ def build_graph(settings: Settings) -> Runnable[ScreeningState, ScreeningState]:
     g.add_node("enthusiast", partial(enthusiast_node, settings=settings))
     g.add_node("pragmatist", partial(pragmatist_node, settings=settings))
     g.add_node("recruiter", partial(recruiter_node, settings=settings))
+    g.add_node("tailor", partial(tailor_node, settings=settings))
 
     g.add_edge(START, "extract")
     g.add_edge(START, "parse")            # extract ‖ parse
@@ -46,6 +54,12 @@ def build_graph(settings: Settings) -> Runnable[ScreeningState, ScreeningState]:
     g.add_edge("enthusiast", "recruiter")
     g.add_edge("pragmatist", "recruiter") # fan-in: recruiter waits for all 3
 
-    g.add_edge("recruiter", END)
+    # verdict-gated branch: invite ends the run; hold/reject goes to the tailor
+    g.add_conditional_edges(
+        "recruiter",
+        route_after_recruiter,
+        {"tailor": "tailor", "done": END},
+    )
+    g.add_edge("tailor", END)
 
     return g.compile()

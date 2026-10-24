@@ -14,6 +14,7 @@ from agenticresume.agents.mapping import to_career_profile, to_job_post
 from agenticresume.agents.pragmatist import run_pragmatist
 from agenticresume.agents.recruiter import recommend
 from agenticresume.agents.skeptic import run_skeptic
+from agenticresume.agents.tailor import tailor
 from agenticresume.graph.state import ScreeningState
 from agenticresume.settings import Settings
 
@@ -60,3 +61,13 @@ async def recruiter_node(state: ScreeningState, *, settings: Settings) -> Screen
         state["assessments"],# merged list of all 3, thanks to the reducer + fan-in
     )
     return {"result": result}
+
+
+async def tailor_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
+    reframes = await tailor(
+        settings,
+        state["profile"],
+        state["job_post"],
+        state["coverages"],
+    )
+    return {"tailoring": reframes}

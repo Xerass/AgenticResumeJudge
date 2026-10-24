@@ -230,7 +230,7 @@ def to_analysis_result(
         rationale=output.rationale.strip() or "No rationale provided.",
     )
 
-def raframes_from_tailor(output: TailorOutput, facts: tuple[Fact, ...], requirements: tuple[Requirement, ...]) -> list[Reframe]:
+def reframes_from_tailor(output: TailorOutput, facts: tuple[Fact, ...], requirements: tuple[Requirement, ...]) -> list[Reframe]:
     """Translates the index based tailoring plan into domain reframes"""
 
     reframes: list[Reframe] = []

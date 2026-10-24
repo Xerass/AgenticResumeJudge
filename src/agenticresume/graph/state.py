@@ -14,6 +14,7 @@ from agenticresume.domain.models import (
     CareerProfile,
     Coverage,
     JobPost,
+    Reframe,
 )
 
 class ScreeningState(TypedDict, total=False):
@@ -27,3 +28,4 @@ class ScreeningState(TypedDict, total=False):
     coverages: list[Coverage]                                # audit node
     assessments: Annotated[list[Assessment], operator.add]   # 3 judges, pass to the add (concatenator) accumulator, side note: append wont work since the LangGraph Reducer sees it as null
     result: AnalysisResult                                   # recruiter node
+    tailoring: list[Reframe]                                 # tailor node — single writer, so no reducer
