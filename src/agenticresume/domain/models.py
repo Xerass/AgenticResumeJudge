@@ -29,6 +29,9 @@ JudgePersona = Literal["skeptic", "enthusiast", "pragmatist"]
 FactStatus = Literal["active", "superseded"]
 Decision = Literal["invite", "reject", "hold"]
 TailorMove = Literal["reframe", "surface", "gap"]
+# the critic's per-move grade: a truthful, on-target move is 'strong'; a truthful
+# but vague one is 'weak'; one that claims more than its cited fact is 'unfounded'
+ReframeVerdict = Literal["strong", "weak", "unfounded"]
 
 
 #vase class, defines configDict only
@@ -244,7 +247,31 @@ class Reframe(Base):
             raise ValueError("reframe/surface must cite a source fact; only 'gap' may not")
         return self
 
-    
+
+class RevisionNote(Base):
+    """One targeted instruction for the reviser, bound to the weak requirement
+    it concerns. This is the unit the reviser acts on — feedback, not a grade."""
+
+    requirement_id: UUID                 # which weak requirement this note is about
+    verdict: ReframeVerdict              # severity: 'weak' (sharpen) vs 'unfounded' (honesty)
+    feedback: str = ""                   # one actionable sentence: what to change
+
+
+class Critique(Base):
+    """The critic's read on a whole tailoring plan: a score the loop can gate on,
+    plus the notes the reviser needs to improve. Ephemeral, like Assessment."""
+
+    score: int = Field(ge=1, le=10)      # 10 = every move truthful and sharply targeted
+    summary: str = ""                    # one-line overall read
+    notes: tuple[RevisionNote, ...] = () # only for moves that need work; strong moves omitted
+
+    @property
+    def has_unfounded(self) -> bool:
+        """Any move the critic thinks overreaches its cited fact — an honesty
+        failure the loop may refuse to early-stop on, however high the score."""
+        return any(n.verdict == "unfounded" for n in self.notes)
+
+
 class AnalysisResult(Base):
     """The output of one screening run. Computed, not stored."""
 

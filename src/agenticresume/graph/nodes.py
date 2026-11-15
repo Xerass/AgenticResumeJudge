@@ -7,6 +7,7 @@ a node is a defined action, reading what it needs from the state, and writing wh
 import logging
 
 from agenticresume.agents.auditor import audit
+from agenticresume.agents.critic import critique
 from agenticresume.agents.enthusiast import run_enthusiast
 from agenticresume.agents.extractor import extract_profile
 from agenticresume.agents.jobpost import parse_job_post
@@ -15,6 +16,7 @@ from agenticresume.agents.pragmatist import run_pragmatist
 from agenticresume.agents.recruiter import recommend
 from agenticresume.agents.skeptic import run_skeptic
 from agenticresume.agents.tailor import tailor
+from agenticresume.domain.tailoring import redact_unfounded
 from agenticresume.graph.state import ScreeningState
 from agenticresume.settings import Settings
 
@@ -64,10 +66,34 @@ async def recruiter_node(state: ScreeningState, *, settings: Settings) -> Screen
 
 
 async def tailor_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
+    # critique is absent on the first pass and present on a revision — the tailor
+    # treats a present one as repair instructions. state.get, since total=False.
     reframes = await tailor(
         settings,
         state["profile"],
         state["job_post"],
         state["coverages"],
+        critique=state.get("critique"),
     )
     return {"tailoring": reframes}
+
+
+async def critic_node(state: ScreeningState, *, settings: Settings) -> ScreeningState:
+    # grades the plan the tailor just wrote, and bumps the pass counter the router
+    # gates on. single writer of both keys, so last-write-wins is correct here.
+    result = await critique(
+        settings,
+        state["profile"],
+        state["job_post"],
+        state["coverages"],
+        state["tailoring"],
+    )
+    return {"critique": result, "revision_count": state.get("revision_count", 0) + 1}
+
+
+def finalize_node(state: ScreeningState) -> ScreeningState:
+    # pure, no LLM: the loop may accept at its cap with an overreaching move still
+    # present. Enforce honesty before the plan leaves the graph. No-op if nothing
+    # was flagged, so it runs harmlessly on the early-stop path too.
+    guarded = redact_unfounded(state["tailoring"], state["critique"])
+    return {"tailoring": guarded}

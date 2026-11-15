@@ -6,7 +6,7 @@ import logging
 
 from agenticresume.agents.mapping import reframes_from_tailor
 from agenticresume.agents.schemas import TailorOutput
-from agenticresume.domain.models import CareerProfile, Coverage, Fact, JobPost, Reframe, Requirement
+from agenticresume.domain.models import CareerProfile, Coverage, Critique, Fact, JobPost, Reframe, Requirement
 from agenticresume.domain.scoring import _NECESSITY_WEIGHT  # rank weakpoints by what moves the score
 from agenticresume.infra.llm import invoke_structured
 from agenticresume.settings import Settings
@@ -35,9 +35,12 @@ def _render_context(
     weak: list[Coverage],
     requirements: tuple[Requirement, ...],
     facts: tuple[Fact, ...],
+    critique: Critique | None,
 ) -> str:
     """Show ALL facts (so 'surface' can find missed ones) but only the weak
-    requirements — each keeping its original [R#] so the mapper resolves it."""
+    requirements — each keeping its original [R#] so the mapper resolves it.
+    On a revision pass, the prior critique's notes lead the context so the model
+    fixes the flagged moves first; [R#] here matches the notes' numbering."""
 
     where = {r.id: f"{r.title} @ {r.company}" for r in profile.roles}
     where |= {p.id: f"Project: {p.name}" for p in profile.projects}
@@ -55,6 +58,12 @@ def _render_context(
             f":: audit says {c.status} — {c.reasoning}"
         )
 
+    if critique is not None and critique.notes:
+        lines += ["", "PRIOR REVIEW — your last attempt was graded; fix these first:"]
+        for n in critique.notes:
+            rn = req_index.get(n.requirement_id, "?")
+            lines.append(f"[R{rn}] ({n.verdict}) {n.feedback}")
+
     return "\n".join(lines)
 
 
@@ -63,8 +72,11 @@ async def tailor(
     profile: CareerProfile,
     job_post: JobPost,
     coverages: list[Coverage],
+    critique: Critique | None = None,
 ) -> list[Reframe]:
-    """Produce a truthful tailoring plan over the weak requirements."""
+    """Produce a truthful tailoring plan over the weak requirements. When a prior
+    `critique` is supplied, this is a revision pass: its notes are folded into the
+    context so the model can repair the moves the critic flagged."""
 
     facts = profile.active_facts
     requirements = job_post.requirements
@@ -80,7 +92,7 @@ async def tailor(
         logger.info("no weakpoints to tailor")
         return []
 
-    context = _render_context(profile, weak, requirements, facts)
+    context = _render_context(profile, weak, requirements, facts, critique)
     output = await invoke_structured(settings, TailorOutput, SYSTEM_PROMPT, context)
 
     reframes = reframes_from_tailor(output, facts, requirements)

@@ -4,16 +4,18 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from agenticresume.agents.schemas import AssessmentOutput, ExtractionOutput, JobPostOutput, AuditorOutput, RecruiterOutput, TailorOutput
+from agenticresume.agents.schemas import AssessmentOutput, CritiqueOutput, ExtractionOutput, JobPostOutput, AuditorOutput, RecruiterOutput, TailorOutput
 from agenticresume.domain.models import (
     AnalysisResult,
     Assessment,
-    CareerProfile, 
+    CareerProfile,
+    Critique,
     Fact,
-    JudgePersona, 
+    JudgePersona,
     Project,
-    Reframe, 
-    Role, 
+    Reframe,
+    RevisionNote,
+    Role,
     Skill,
     JobPost,
     Requirement,
@@ -267,3 +269,27 @@ def reframes_from_tailor(output: TailorOutput, facts: tuple[Fact, ...], requirem
         )
 
     return reframes
+
+
+def to_critique(output: CritiqueOutput, requirements: tuple[Requirement, ...]) -> Critique:
+    """Translate the index-based critique into a domain Critique.
+
+    Mirrors the other mappers' defensive stance: clamp the score and drop notes
+    that cite a requirement index the model hallucinated."""
+
+    score = max(1, min(10, output.score))  # trust the rubric, not the raw number
+
+    notes: list[RevisionNote] = []
+    for n in output.notes:
+        ri = n.requirement_index - 1
+        if not 0 <= ri < len(requirements):
+            continue  # hallucinated index, drop it
+        notes.append(
+            RevisionNote(
+                requirement_id=requirements[ri].id,
+                verdict=n.verdict,
+                feedback=n.feedback.strip(),
+            )
+        )
+
+    return Critique(score=score, summary=output.summary.strip(), notes=tuple(notes))

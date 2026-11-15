@@ -4,7 +4,7 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 from agenticresume.domain.models import (
-    CoverageStatus, Decision, Necessity, RequirementKind, TailorMove,
+    CoverageStatus, Decision, Necessity, ReframeVerdict, RequirementKind, TailorMove,
 )
 
 class Wire(BaseModel):
@@ -120,3 +120,30 @@ class ReframeItem(Wire):
 
 class TailorOutput(Wire):
     items: list[ReframeItem] = Field(default_factory=list)
+
+
+class CritiqueNote(Wire):
+    requirement_index: int = Field(description="The [R#] number of the weak requirement this note is about")
+    verdict: ReframeVerdict = Field(
+        description=(
+            "'strong' if the move is truthful and on-target; 'weak' if truthful but "
+            "vague or generic; 'unfounded' if it claims more than its cited [F#] supports"
+        )
+    )
+    feedback: str = Field(
+        default="",
+        description="One actionable sentence telling the reviser exactly what to change for this move",
+    )
+
+
+class CritiqueOutput(Wire):
+    score: int = Field(
+        description="Overall strength of the whole tailoring plan, 1 (poor) to 10 (excellent)",
+        ge=1,
+        le=10,
+    )
+    summary: str = Field(default="", description="One sentence capturing the overall read")
+    notes: list[CritiqueNote] = Field(
+        default_factory=list,
+        description="One note per move that needs work; omit moves that are already strong",
+    )

@@ -7,8 +7,10 @@ from langgraph.graph import END, START, StateGraph
 
 from agenticresume.graph.nodes import (
     audit_node,
+    critic_node,
     enthusiast_node,
     extract_node,
+    finalize_node,
     parse_node,
     pragmatist_node,
     recruiter_node,
@@ -19,10 +21,27 @@ from agenticresume.graph.state import ScreeningState
 from agenticresume.settings import Settings
 
 
+EARLY_STOP_SCORE = 8   # a plan graded this high (and honest) needs no more revision
+MAX_PASSES = 2         # hard cap on tailor passes — the loop's termination guarantee
+
+
 def route_after_recruiter(state: ScreeningState) -> str:
     """Pure, deterministic branch — no LLM. The verdict is the decision point:
     an invite is done; a hold/reject routes into the advocate to tailor."""
     return "tailor" if state["result"].decision != "invite" else "done"
+
+
+def route_after_critic(state: ScreeningState) -> str:
+    """The reflection gate — also pure. Two stop conditions, honesty first:
+    the hard cap guarantees termination, and the early-stop fires only when the
+    plan is BOTH good enough AND free of unfounded (overreaching) moves. A high
+    score that still hides a fabrication loops back rather than shipping."""
+    critique = state["critique"]
+    if state.get("revision_count", 0) >= MAX_PASSES:
+        return "accept"
+    if critique.score >= EARLY_STOP_SCORE and not critique.has_unfounded:
+        return "accept"
+    return "revise"
 
 
 def build_graph(settings: Settings) -> Runnable[ScreeningState, ScreeningState]:
@@ -39,6 +58,8 @@ def build_graph(settings: Settings) -> Runnable[ScreeningState, ScreeningState]:
     g.add_node("pragmatist", partial(pragmatist_node, settings=settings))
     g.add_node("recruiter", partial(recruiter_node, settings=settings))
     g.add_node("tailor", partial(tailor_node, settings=settings))
+    g.add_node("critic", partial(critic_node, settings=settings))
+    g.add_node("finalize", finalize_node)  # pure, LLM-free — no settings to bind
 
     g.add_edge(START, "extract")
     g.add_edge(START, "parse")            # extract ‖ parse
@@ -60,6 +81,17 @@ def build_graph(settings: Settings) -> Runnable[ScreeningState, ScreeningState]:
         route_after_recruiter,
         {"tailor": "tailor", "done": END},
     )
-    g.add_edge("tailor", END)
+
+    # the reflection loop: every tailor pass is graded, then either accepted or
+    # sent back for one more pass. "revise" is the backward edge that makes this
+    # a cycle rather than a DAG — bounded by MAX_PASSES in route_after_critic.
+    g.add_edge("tailor", "critic")
+    g.add_conditional_edges(
+        "critic",
+        route_after_critic,
+        {"revise": "tailor", "accept": "finalize"},
+    )
+    # honesty guard runs on every accepted plan, then the graph ends
+    g.add_edge("finalize", END)
 
     return g.compile()
